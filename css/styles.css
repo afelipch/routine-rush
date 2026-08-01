@@ -425,6 +425,39 @@ select:focus-visible,
   margin-bottom: 1rem;
 }
 
+/* Ilustraciones SVG (reemplazan a los emojis cuando están disponibles) */
+.illustration {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+.illustration svg {
+  display: block;
+  width: 1.7em;
+  height: 1.7em;
+}
+.big-icon .illustration {
+  width: 100%;
+}
+.big-icon .illustration svg {
+  width: 6rem;
+  height: 6rem;
+  margin: 0 auto;
+}
+.option-icon .illustration svg,
+.sequence-item .illustration svg,
+.sequence-pool-item .illustration svg,
+.drag-item .illustration svg,
+.chip .illustration svg {
+  width: 1.9em;
+  height: 1.9em;
+}
+.placed-chip .illustration svg {
+  width: 1.3em;
+  height: 1.3em;
+}
+
 .options-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

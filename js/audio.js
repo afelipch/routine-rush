@@ -1,11 +1,11 @@
 /*
  * Routine Rush — Audio
  * ---------------------------------------------------------------
- * Tres canales independientes:
+ * Dos canales independientes:
  *   - pronunciation: window.speechSynthesis (voz francesa si existe)
  *   - sfx: pequeños efectos generados con WebAudio (sin archivos externos)
- *   - music: fondo ambiental muy suave generado con WebAudio
  * Todo funciona sin conexión y sin archivos de audio con derechos de autor.
+ * (Sin música de fondo, a pedido explícito del profesor que usa el juego.)
  */
 
 const AudioModule = (function () {
@@ -13,7 +13,6 @@ const AudioModule = (function () {
   let voicesReady = false;
   let warnedNoVoice = false;
   let ctx = null;
-  let musicNodes = null;
 
   function ensureContext() {
     if (!ctx) {
@@ -115,46 +114,6 @@ const AudioModule = (function () {
     tone(880, 0.1, "triangle", 0.08);
   }
 
-  function startMusic() {
-    const settings = window.Storage.getSettings();
-    if (!settings.musicOn) return;
-    const c = ensureContext();
-    if (!c || musicNodes) return;
-    const gain = c.createGain();
-    gain.gain.value = 0.025;
-    gain.connect(c.destination);
-    const notes = [261.63, 329.63, 392.0, 329.63];
-    let step = 0;
-    const osc = c.createOscillator();
-    osc.type = "sine";
-    osc.frequency.value = notes[0];
-    osc.connect(gain);
-    osc.start();
-    const interval = setInterval(() => {
-      if (!ctx) return;
-      step = (step + 1) % notes.length;
-      osc.frequency.linearRampToValueAtTime(notes[step], ctx.currentTime + 0.4);
-    }, 1400);
-    musicNodes = { osc, gain, interval };
-  }
-
-  function stopMusic() {
-    if (!musicNodes) return;
-    clearInterval(musicNodes.interval);
-    try {
-      musicNodes.osc.stop();
-    } catch (e) {
-      /* noop */
-    }
-    musicNodes = null;
-  }
-
-  function setMusicEnabled(enabled) {
-    window.Storage.updateSettings({ musicOn: enabled });
-    if (enabled) startMusic();
-    else stopMusic();
-  }
-
   function setSfxEnabled(enabled) {
     window.Storage.updateSettings({ sfxOn: enabled });
   }
@@ -177,9 +136,6 @@ const AudioModule = (function () {
     sfxClick,
     sfxStar,
     sfxCombo,
-    startMusic,
-    stopMusic,
-    setMusicEnabled,
     setSfxEnabled,
     setVoiceEnabled,
     hasFrenchVoice,

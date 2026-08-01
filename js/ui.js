@@ -19,12 +19,25 @@ const UI = (function () {
   let dragSelectedItem = null;
   let multiSelectDone = new Set();
   let routineSelections = {};
+  let matchingSelectedLeft = null;
   let currentTeacherMode = false;
   let speedTimer = null;
   let pendingAutoAdvance = null;
 
   function $(id) {
     return document.getElementById(id);
+  }
+
+  // Devuelve una ilustración SVG (más clara y consistente que un emoji)
+  // cuando existe una para esta palabra; si no, usa el emoji como
+  // alternativa segura. El SVG se envuelve para heredar el tamaño del
+  // texto que lo rodea.
+  function iconMarkup(wordId, fallbackEmoji) {
+    const svgContent = wordId && window.ILLUSTRATIONS ? window.ILLUSTRATIONS[wordId] : null;
+    if (svgContent) {
+      return '<span class="illustration" aria-hidden="true">' + svgContent + "</span>";
+    }
+    return '<span class="illustration illustration--emoji" aria-hidden="true">' + (fallbackEmoji || "❓") + "</span>";
   }
 
   function cacheEls() {
@@ -38,7 +51,7 @@ const UI = (function () {
       "btn-play-audio", "challenge-body", "feedback-panel", "btn-hint", "btn-submit", "btn-next",
       "screen-results", "results-stars", "results-stars-text", "results-score", "results-accuracy",
       "results-combo", "results-mastered", "results-practice", "btn-replay", "btn-next-level", "btn-back-to-map",
-      "modal-settings", "toggle-music", "toggle-sfx", "toggle-voice", "toggle-textsize", "btn-close-settings",
+      "modal-settings", "toggle-sfx", "toggle-voice", "toggle-textsize", "btn-close-settings",
       "modal-pause", "btn-resume", "btn-pause-settings", "btn-pause-quit",
       "modal-confirm-reset", "btn-cancel-reset", "btn-confirm-reset",
       "modal-teacher", "teacher-levels", "teacher-categories", "teacher-timer", "teacher-question-count",
@@ -163,7 +176,6 @@ const UI = (function () {
   // ---------------------------------------------------------------
   function startLevelFlow(levelNumber) {
     AudioModule.ensureContext();
-    AudioModule.startMusic();
     const challenge = Game.startLevel(levelNumber);
     currentTeacherMode = false;
     showScreen("screen-game");
@@ -174,7 +186,6 @@ const UI = (function () {
 
   function startCustomFlow(teacherSettings) {
     AudioModule.ensureContext();
-    AudioModule.startMusic();
     Game.startCustomPractice(teacherSettings);
     currentTeacherMode = true;
     showScreen("screen-game");
@@ -210,6 +221,7 @@ const UI = (function () {
     dragSelectedItem = null;
     multiSelectDone = new Set();
     routineSelections = {};
+    matchingSelectedLeft = null;
 
     updateHud();
     els.feedbackPanel.hidden = true;
@@ -241,7 +253,7 @@ const UI = (function () {
     const wrap = document.createElement("div");
     switch (challenge.type) {
       case "image-word":
-        wrap.appendChild(buildIcon(challenge.data.icon));
+        wrap.appendChild(buildIcon(challenge.data.wordId, challenge.data.icon));
         wrap.appendChild(buildOptionsGrid(challenge.data.options, (val, btn) => selectSimple(val, btn)));
         break;
       case "listen-image":
@@ -252,9 +264,9 @@ const UI = (function () {
       case "situation-choice": {
         const p = document.createElement("p");
         p.className = "fill-blank-sentence";
-        p.textContent = challenge.data.situation;
+        p.textContent = challenge.data.situationFr;
         wrap.appendChild(p);
-        wrap.appendChild(buildOptionsGrid(challenge.data.options, (val, btn) => selectSimple(val, btn)));
+        wrap.appendChild(buildOptionsGridById(challenge.data.options, (id, btn) => selectSimple(id, btn)));
         break;
       }
       case "fill-blank":
@@ -265,7 +277,7 @@ const UI = (function () {
         const p = document.createElement("p");
         p.className = "fill-blank-sentence";
         p.textContent = challenge.data.prompt;
-        wrap.appendChild(buildIcon(challenge.data.icon));
+        wrap.appendChild(buildIcon(challenge.data.wordId, challenge.data.icon));
         wrap.appendChild(p);
         wrap.appendChild(buildIconOptionsGrid(challenge.data.options, (id, btn) => selectSimple(id, btn)));
         break;
@@ -295,17 +307,20 @@ const UI = (function () {
       case "final-routine":
         wrap.appendChild(buildFinalRoutine(challenge));
         break;
+      case "matching":
+        wrap.appendChild(buildMatching(challenge));
+        break;
       default:
         wrap.textContent = "Type de défi inconnu.";
     }
     return wrap;
   }
 
-  function buildIcon(icon) {
+  function buildIcon(wordId, fallbackEmoji) {
     const div = document.createElement("div");
     div.className = "big-icon";
     div.setAttribute("aria-hidden", "true");
-    div.textContent = icon;
+    div.innerHTML = iconMarkup(wordId, fallbackEmoji);
     return div;
   }
 
@@ -352,7 +367,8 @@ const UI = (function () {
       btn.type = "button";
       btn.className = "option-btn";
       btn.setAttribute("aria-pressed", "false");
-      btn.textContent = (opt.icon ? opt.icon + " " : "") + opt.label;
+      btn.innerHTML =
+        '<span class="option-icon">' + iconMarkup(opt.id, opt.icon) + "</span><span>" + opt.label + "</span>";
       btn.addEventListener("click", () => {
         grid.querySelectorAll(".option-btn").forEach((b) => b.setAttribute("aria-pressed", "false"));
         btn.setAttribute("aria-pressed", "true");
@@ -373,7 +389,7 @@ const UI = (function () {
       btn.className = "option-btn";
       btn.setAttribute("aria-pressed", "false");
       btn.setAttribute("aria-label", opt.label);
-      btn.innerHTML = '<span class="option-icon" aria-hidden="true">' + opt.icon + "</span><span>" + opt.label + "</span>";
+      btn.innerHTML = '<span class="option-icon">' + iconMarkup(opt.id, opt.icon) + "</span><span>" + opt.label + "</span>";
       btn.addEventListener("click", () => {
         grid.querySelectorAll(".option-btn").forEach((b) => b.setAttribute("aria-pressed", "false"));
         btn.setAttribute("aria-pressed", "true");
@@ -396,7 +412,7 @@ const UI = (function () {
       p.textContent = challenge.data.sentence;
       div.appendChild(p);
     } else {
-      div.appendChild(buildIcon(challenge.data.icon));
+      div.appendChild(buildIcon(challenge.data.wordId, challenge.data.icon));
     }
     const input = document.createElement("input");
     input.type = "text";
@@ -435,7 +451,7 @@ const UI = (function () {
           '<span class="seq-index" aria-hidden="true">' +
           (i + 1) +
           "</span><span>" +
-          item.icon +
+          iconMarkup(item.id, item.icon) +
           " " +
           item.label +
           "</span>";
@@ -460,7 +476,7 @@ const UI = (function () {
           const btn = document.createElement("button");
           btn.type = "button";
           btn.className = "sequence-pool-item";
-          btn.textContent = it.icon + " " + it.label;
+          btn.innerHTML = iconMarkup(it.id, it.icon) + " " + it.label;
           btn.addEventListener("click", () => {
             sequenceOrder.push(it.id);
             refresh();
@@ -497,7 +513,7 @@ const UI = (function () {
         btn.draggable = !placed;
         btn.setAttribute("aria-pressed", dragSelectedItem === it.id ? "true" : "false");
         btn.disabled = placed;
-        btn.innerHTML = "<span aria-hidden='true'>" + it.icon + "</span><span>" + it.label + "</span>";
+        btn.innerHTML = iconMarkup(it.id, it.icon) + "<span>" + it.label + "</span>";
         btn.addEventListener("click", () => {
           dragSelectedItem = dragSelectedItem === it.id ? null : it.id;
           refresh();
@@ -520,7 +536,7 @@ const UI = (function () {
           const it = challenge.data.items.find((x) => x.id === itemId);
           const chip = document.createElement("span");
           chip.className = "placed-chip";
-          chip.textContent = it.icon + " " + it.label;
+          chip.innerHTML = iconMarkup(it.id, it.icon) + " " + it.label;
           itemsWrap.appendChild(chip);
         });
         box.appendChild(itemsWrap);
@@ -576,7 +592,8 @@ const UI = (function () {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "option-btn";
-      btn.innerHTML = '<span class="option-icon" aria-hidden="true">' + action.icon + "</span><span>" + action.label + "</span>";
+      btn.innerHTML =
+        '<span class="option-icon">' + iconMarkup(action.id, action.icon) + "</span><span>" + action.label + "</span>";
       btn.addEventListener("click", () => {
         if (multiSelectDone.has(action.id)) return;
         if (challenge.data.correctIds.indexOf(action.id) !== -1) {
@@ -623,7 +640,8 @@ const UI = (function () {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "option-btn";
-      btn.innerHTML = '<span class="option-icon" aria-hidden="true">' + action.icon + "</span><span>" + action.label + "</span>";
+      btn.innerHTML =
+        '<span class="option-icon">' + iconMarkup(action.id, action.icon) + "</span><span>" + action.label + "</span>";
       btn.addEventListener("click", () => {
         if (multiSelectDone.has(action.id)) return;
         multiSelectDone.add(action.id);
@@ -682,7 +700,7 @@ const UI = (function () {
         chip.type = "button";
         chip.className = "chip";
         chip.setAttribute("aria-pressed", "false");
-        chip.textContent = item.icon + " " + item.label;
+        chip.innerHTML = iconMarkup(item.id, item.icon) + " " + item.label;
         chip.addEventListener("click", () => {
           const list = routineSelections[group.key];
           const idx = list.indexOf(item.id);
@@ -704,6 +722,78 @@ const UI = (function () {
     return div;
   }
 
+  function buildMatching(challenge) {
+    const wrap = document.createElement("div");
+    wrap.className = "dragdrop-wrap";
+    const leftCol = document.createElement("div");
+    leftCol.className = "dragdrop-items";
+    const rightCol = document.createElement("div");
+    rightCol.className = "dragdrop-items";
+
+    const note = document.createElement("p");
+    note.className = "es-note";
+    note.style.width = "100%";
+    note.textContent = "Clique sur un verbe à gauche, puis sur son image à droite.";
+    wrap.appendChild(note);
+
+    function refresh() {
+      leftCol.innerHTML = "";
+      challenge.data.left.forEach((item) => {
+        const done = multiSelectDone.has(item.id);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "drag-item" + (done ? " is-placed" : "");
+        btn.disabled = done;
+        btn.setAttribute("aria-pressed", matchingSelectedLeft === item.id ? "true" : "false");
+        btn.textContent = item.label;
+        btn.addEventListener("click", () => {
+          matchingSelectedLeft = matchingSelectedLeft === item.id ? null : item.id;
+          refresh();
+        });
+        leftCol.appendChild(btn);
+      });
+      rightCol.innerHTML = "";
+      challenge.data.right.forEach((item) => {
+        const done = multiSelectDone.has(item.id);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "drag-item" + (done ? " is-placed" : "");
+        btn.disabled = done;
+        btn.innerHTML = iconMarkup(item.id, item.icon);
+        btn.setAttribute("aria-label", "Image");
+        btn.addEventListener("click", () => {
+          if (!matchingSelectedLeft) return;
+          const correctRightId = challenge.data.correctMap[matchingSelectedLeft];
+          if (correctRightId === item.id) {
+            // El id de izquierda y derecha es la misma palabra: basta con
+            // marcarlo una vez para que ambas columnas lo reconozcan.
+            multiSelectDone.add(matchingSelectedLeft);
+            const pts = Game.awardMicroPoint(matchingSelectedLeft, 30);
+            AudioModule.sfxCorrect();
+            updateHud();
+            showTransientMessage("Bien joué ! +" + pts + " points.");
+            matchingSelectedLeft = null;
+            refresh();
+            const totalPairs = challenge.data.left.length;
+            if (multiSelectDone.size >= totalPairs) {
+              completeMultiSelectChallenge(challenge);
+            }
+          } else {
+            AudioModule.sfxWrong();
+            btn.classList.add("is-incorrect");
+            setTimeout(() => btn.classList.remove("is-incorrect"), 400);
+          }
+        });
+        rightCol.appendChild(btn);
+      });
+    }
+    refresh();
+    wrap.appendChild(leftCol);
+    wrap.appendChild(rightCol);
+    els.btnSubmit.hidden = true;
+    return wrap;
+  }
+
   // ---------------------------------------------------------------
   // Pistas
   // ---------------------------------------------------------------
@@ -718,12 +808,19 @@ const UI = (function () {
       els.challengeBody.appendChild(box);
     }
     if (result.type === "letter") {
-      box.textContent = "💡 Indice : le mot commence par « " + result.content + " ».";
+      box.textContent = "💡 Indice : « " + result.content + " » (les lettres manquantes sont cachées).";
     } else if (result.type === "audio") {
-      box.textContent = "💡 Indice : écoute bien...";
+      box.innerHTML =
+        "💡 Indice : écoute le mot, puis regarde la phrase — <em>" +
+        (result.sentence || "") +
+        "</em>";
       AudioModule.speak(result.content);
     } else if (result.type === "translation") {
-      box.textContent = "💡 Indice (traduction) : " + result.content;
+      box.textContent =
+        "💡 Indice (traduction) : « " +
+        result.content +
+        " »" +
+        (result.category ? " — catégorie : " + result.category : "");
     } else if (result.type === "reduce") {
       box.textContent = "💡 Indice : il ne reste que deux options possibles.";
       // Re-renderiza las opciones reducidas
@@ -737,7 +834,8 @@ const UI = (function () {
           btn.className = "option-btn";
           btn.setAttribute("aria-pressed", "false");
           if (isObj) {
-            btn.innerHTML = '<span class="option-icon" aria-hidden="true">' + (opt.icon || "") + "</span><span>" + opt.label + "</span>";
+            btn.innerHTML =
+              '<span class="option-icon">' + iconMarkup(opt.id, opt.icon) + "</span><span>" + opt.label + "</span>";
           } else {
             btn.textContent = opt;
           }
@@ -761,11 +859,11 @@ const UI = (function () {
   function evaluateAnswer(challenge) {
     switch (challenge.type) {
       case "image-word":
-      case "situation-choice":
         return { correct: selection === challenge.data.correctAnswer };
       case "listen-image":
       case "what-need":
       case "find-error":
+      case "situation-choice":
         return { correct: selection === challenge.data.correctId };
       case "fill-blank":
       case "write-verb": {
@@ -984,7 +1082,6 @@ const UI = (function () {
 
   function finishCurrentLevel() {
     const result = Game.finishLevel();
-    AudioModule.stopMusic();
     renderResults(result);
     showScreen("screen-results");
   }
@@ -1033,7 +1130,14 @@ const UI = (function () {
       els.teacherLevels.appendChild(chip);
     });
 
-    const catLabels = { matin: "Matin", journee: "Journée", maison: "Chambre/Cuisine", menage: "Ménage", objet: "Objets" };
+    const catLabels = {
+      matin: "Matin",
+      journee: "Journée",
+      maison: "Chambre/Cuisine",
+      menage: "Ménage",
+      objet: "Objets",
+      idiomatique: "Expressions"
+    };
     els.teacherCategories.innerHTML = "";
     Object.keys(catLabels).forEach((cat) => {
       const chip = document.createElement("button");
@@ -1065,7 +1169,6 @@ const UI = (function () {
   // ---------------------------------------------------------------
   function renderSettingsModal() {
     const s = Storage.getSettings();
-    els.toggleMusic.checked = s.musicOn;
     els.toggleSfx.checked = s.sfxOn;
     els.toggleVoice.checked = s.voiceOn;
     els.toggleTextsize.checked = document.documentElement.getAttribute("data-textsize") === "large";
@@ -1130,13 +1233,11 @@ const UI = (function () {
     els.btnPauseQuit.addEventListener("click", () => {
       closeModal("modal-pause");
       clearSpeedTimer();
-      AudioModule.stopMusic();
       showScreen("screen-map");
       renderMap();
     });
 
     els.btnCloseSettings.addEventListener("click", () => closeModal("modal-settings"));
-    els.toggleMusic.addEventListener("change", (e) => AudioModule.setMusicEnabled(e.target.checked));
     els.toggleSfx.addEventListener("change", (e) => AudioModule.setSfxEnabled(e.target.checked));
     els.toggleVoice.addEventListener("change", (e) => AudioModule.setVoiceEnabled(e.target.checked));
     els.toggleTextsize.addEventListener("change", (e) => {

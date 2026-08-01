@@ -114,6 +114,10 @@ const Game = (function () {
     nettoyer_la_cuisine: "cuisine"
   };
 
+  // Todos los escenarios siguen el mismo patrón claro y sin ambigüedad:
+  // "usa la herramienta X para hacer Y" (X no sirve para Y). Esto evita
+  // construcciones extrañas de tipo "hace A para hacer B" que pueden
+  // resultar confusas o sin sentido lógico.
   const FIND_ERROR_SCENARIOS = [
     {
       id: "err1",
@@ -131,31 +135,150 @@ const Game = (function () {
     },
     {
       id: "err3",
-      situationFr: "Une personne utilise du savon pour sortir les poubelles.",
-      situationEs: "Una persona usa jabón para sacar la basura.",
-      correctId: "sortir_les_poubelles",
-      optionIds: ["sortir_les_poubelles", "se_laver", "lire", "etudier"]
+      situationFr: "Une personne utilise du savon pour balayer le sol.",
+      situationEs: "Una persona usa jabón para barrer el suelo.",
+      correctId: "balayer",
+      optionIds: ["balayer", "se_laver", "lire", "etudier"]
     },
     {
       id: "err4",
-      situationFr: "Une personne regarde la télévision pour faire la lessive.",
-      situationEs: "Una persona ve televisión para lavar la ropa.",
+      situationFr: "Une personne utilise un aspirateur pour faire la lessive.",
+      situationEs: "Una persona usa una aspiradora para lavar la ropa.",
       correctId: "faire_la_lessive",
-      optionIds: ["faire_la_lessive", "regarder_la_television", "lire", "se_coiffer"]
+      optionIds: ["faire_la_lessive", "passer_l_aspirateur", "lire", "se_coiffer"]
     },
     {
       id: "err5",
-      situationFr: "Une personne mange son petit déjeuner pour nettoyer la salle de bains.",
-      situationEs: "Una persona desayuna para limpiar el baño.",
+      situationFr: "Une personne utilise une poubelle pour nettoyer la salle de bains.",
+      situationEs: "Una persona usa un bote de basura para limpiar el baño.",
       correctId: "nettoyer_la_salle_de_bains",
-      optionIds: ["nettoyer_la_salle_de_bains", "prendre_le_petit_dejeuner", "dejeuner", "diner"]
+      optionIds: ["nettoyer_la_salle_de_bains", "sortir_les_poubelles", "dejeuner", "diner"]
     },
     {
       id: "err6",
-      situationFr: "Une personne étend le linge pour faire ses devoirs.",
-      situationEs: "Una persona tiende la ropa para hacer la tarea.",
+      situationFr: "Une personne utilise une éponge pour faire le lit.",
+      situationEs: "Una persona usa una esponja para hacer la cama.",
+      correctId: "faire_le_lit",
+      optionIds: ["faire_le_lit", "faire_la_vaisselle", "se_reposer", "diner"]
+    }
+  ];
+
+  // Escenarios contextuales para "situation-choice": describen una
+  // situación con pistas claras (sin nombrar el verbo objetivo) para que
+  // el estudiante razone la acción correcta, evitando la ambigüedad de
+  // reutilizar la misma frase de ejemplo que ya contiene la respuesta.
+  const SITUATIONS = [
+    {
+      id: "sit1",
+      situationFr: "Il est sept heures et le réveil sonne très fort.",
+      situationEs: "Son las siete y la alarma suena muy fuerte.",
+      correctId: "se_reveiller",
+      optionIds: ["se_reveiller", "se_lever", "se_doucher", "prendre_le_petit_dejeuner"]
+    },
+    {
+      id: "sit2",
+      situationFr: "Tu es réveillé, mais tu es encore couché dans le lit.",
+      situationEs: "Ya despertaste, pero sigues acostado en la cama.",
+      correctId: "se_lever",
+      optionIds: ["se_lever", "se_reveiller", "faire_le_lit", "s_habiller"]
+    },
+    {
+      id: "sit3",
+      situationFr: "Tu viens de te lever et tu as très faim.",
+      situationEs: "Acabas de levantarte y tienes mucha hambre.",
+      correctId: "prendre_le_petit_dejeuner",
+      optionIds: ["prendre_le_petit_dejeuner", "dejeuner", "diner", "se_laver"]
+    },
+    {
+      id: "sit4",
+      situationFr: "Il est midi et tu as très faim.",
+      situationEs: "Es mediodía y tienes mucha hambre.",
+      correctId: "dejeuner",
+      optionIds: ["dejeuner", "diner", "prendre_le_petit_dejeuner", "se_reposer"]
+    },
+    {
+      id: "sit5",
+      situationFr: "Les cours sont finis et tu prends le bus pour rentrer chez toi.",
+      situationEs: "Las clases terminaron y tomas el autobús para volver a casa.",
+      correctId: "rentrer_a_la_maison",
+      optionIds: ["rentrer_a_la_maison", "aller_a_l_ecole", "partir_de_la_maison", "se_reposer"]
+    },
+    {
+      id: "sit6",
+      situationFr: "Tu as un examen de français demain matin.",
+      situationEs: "Tienes un examen de francés mañana por la mañana.",
+      correctId: "etudier",
+      optionIds: ["etudier", "lire", "faire_ses_devoirs", "se_reposer"]
+    },
+    {
+      id: "sit7",
+      situationFr: "Le sol de la cuisine est couvert de miettes de pain.",
+      situationEs: "El suelo de la cocina está cubierto de migas de pan.",
+      correctId: "balayer",
+      optionIds: ["balayer", "passer_l_aspirateur", "faire_la_vaisselle", "faire_la_lessive"]
+    },
+    {
+      id: "sit8",
+      situationFr: "La poubelle de la cuisine est pleine et elle sent mauvais.",
+      situationEs: "El bote de basura de la cocina está lleno y huele mal.",
+      correctId: "sortir_les_poubelles",
+      optionIds: ["sortir_les_poubelles", "faire_la_lessive", "nettoyer_la_cuisine", "ranger_la_maison"]
+    },
+    {
+      id: "sit9",
+      situationFr: "Il y a beaucoup de poussière sur le tapis du salon.",
+      situationEs: "Hay mucho polvo en la alfombra del salón.",
+      correctId: "passer_l_aspirateur",
+      optionIds: ["passer_l_aspirateur", "balayer", "nettoyer_la_salle_de_bains", "faire_la_lessive"]
+    },
+    {
+      id: "sit10",
+      situationFr: "Le linge est encore mouillé après le lavage.",
+      situationEs: "La ropa todavía está mojada después del lavado.",
+      correctId: "etendre_le_linge",
+      optionIds: ["etendre_le_linge", "plier_le_linge", "faire_la_lessive", "laver_le_sol"]
+    },
+    {
+      id: "sit11",
+      situationFr: "Après le repas, il y a des assiettes sales dans l'évier.",
+      situationEs: "Después de la comida, hay platos sucios en el fregadero.",
+      correctId: "faire_la_vaisselle",
+      optionIds: ["faire_la_vaisselle", "debarrasser_la_table", "mettre_la_table", "essuyer_la_table"]
+    },
+    {
+      id: "sit12",
+      situationFr: "Ta chambre est en désordre : des vêtements et des livres traînent partout.",
+      situationEs: "Tu habitación está desordenada: ropa y libros por todas partes.",
+      correctId: "ranger_la_chambre",
+      optionIds: ["ranger_la_chambre", "faire_le_lit", "ranger_les_vetements", "nettoyer_la_table"]
+    },
+    {
+      id: "sit13",
+      situationFr: "Tu viens de te réveiller et le lit est encore défait.",
+      situationEs: "Acabas de despertarte y la cama todavía está deshecha.",
+      correctId: "faire_le_lit",
+      optionIds: ["faire_le_lit", "se_lever", "ranger_la_chambre", "se_laver"]
+    },
+    {
+      id: "sit14",
+      situationFr: "C'est la récréation et tu retrouves tes camarades dans la cour.",
+      situationEs: "Es el recreo y te reúnes con tus compañeros en el patio.",
+      correctId: "parler_avec_ses_amis",
+      optionIds: ["parler_avec_ses_amis", "etudier", "se_reposer", "dejeuner"]
+    },
+    {
+      id: "sit15",
+      situationFr: "Le professeur a donné beaucoup d'exercices pour demain.",
+      situationEs: "El profesor dejó muchos ejercicios para mañana.",
       correctId: "faire_ses_devoirs",
-      optionIds: ["faire_ses_devoirs", "etendre_le_linge", "se_reposer", "diner"]
+      optionIds: ["faire_ses_devoirs", "etudier", "lire", "se_reposer"]
+    },
+    {
+      id: "sit16",
+      situationFr: "Il est vingt heures et toute la famille est à table, le repas est prêt.",
+      situationEs: "Son las ocho de la noche y toda la familia está en la mesa, la comida está lista.",
+      correctId: "diner",
+      optionIds: ["diner", "dejeuner", "prendre_le_petit_dejeuner", "mettre_la_table"]
     }
   ];
 
@@ -169,6 +292,7 @@ const Game = (function () {
     "drag-drop": { fr: "Associe le verbe et l'image.", es: "Relaciona el verbo con la imagen." },
     "what-need": { fr: "Choisis l'objet dont tu as besoin.", es: "Elige el objeto que necesitas." },
     "find-error": { fr: "Trouve l'erreur.", es: "Encuentra el error." },
+    "matching": { fr: "Relie chaque verbe à la bonne image.", es: "Relaciona cada verbo con la imagen correcta." },
     "quick-mission": { fr: "Sélectionne vite le bon verbe !", es: "¡Selecciona rápido el verbo correcto!" },
     "final-sequence": { fr: "Remets la matinée dans l'ordre.", es: "Ordena la mañana." },
     "final-timeline": { fr: "Construis la journée dans l'ordre.", es: "Construye el día en orden." },
@@ -256,17 +380,46 @@ const Game = (function () {
     };
   }
 
-  function genSituationChoice(word) {
-    const options = shuffle([word.infinitive, ...word.distractors]);
+  function genSituationChoice(pool) {
+    const eligible = pool
+      ? SITUATIONS.filter((s) => pool.some((w) => w.id === s.correctId))
+      : SITUATIONS;
+    const scenario = choose(eligible.length ? eligible : SITUATIONS);
+    const options = shuffle(
+      scenario.optionIds.map((id) => {
+        const w = byId(id);
+        return { id, label: w ? w.infinitive : id, icon: w ? w.icon : "❓" };
+      })
+    );
     return {
       type: "situation-choice",
-      wordIds: [word.id],
+      wordIds: [scenario.correctId],
       instruction: INSTRUCTIONS["situation-choice"],
       data: {
-        situation: word.example,
+        situationFr: scenario.situationFr,
+        situationEs: scenario.situationEs,
         options,
-        correctAnswer: word.infinitive,
-        wordId: word.id
+        correctId: scenario.correctId,
+        wordId: scenario.correctId
+      }
+    };
+  }
+
+  function genMatching(words) {
+    // Reto de relacionar pares (verbo ↔ icono). Sin ambigüedad: cada
+    // elemento tiene una única pareja correcta.
+    const pairs = words.map((w) => ({ wordId: w.id, label: w.infinitive, icon: w.icon }));
+    return {
+      type: "matching",
+      wordIds: words.map((w) => w.id),
+      instruction: INSTRUCTIONS["matching"],
+      data: {
+        left: shuffle(pairs.map((p) => ({ id: p.wordId, label: p.label }))),
+        right: shuffle(pairs.map((p) => ({ id: p.wordId, icon: p.icon }))),
+        correctMap: pairs.reduce((acc, p) => {
+          acc[p.wordId] = p.wordId;
+          return acc;
+        }, {})
       }
     };
   }
@@ -417,23 +570,10 @@ const Game = (function () {
       const t = types[i % types.length];
       challenges.push(t === "image-word" ? genImageWord(w) : t === "listen-image" ? genListenImage(w, pool) : genFillBlank(w));
     }
-    const finalIds = [
-      "se_reveiller",
-      "se_lever",
-      "se_doucher",
-      "s_habiller",
-      "prendre_le_petit_dejeuner",
-      "partir_de_la_maison"
-    ];
-    challenges.push({
-      type: "final-sequence",
-      wordIds: finalIds,
-      instruction: INSTRUCTIONS["final-sequence"],
-      data: {
-        items: shuffle(finalIds.map((id) => ({ id, label: byId(id).infinitive, icon: byId(id).icon }))),
-        correctOrders: [finalIds]
-      }
-    });
+    // Reto final : relacionar los 10 verbes de la matinée avec leur icône
+    // (reto de matching, sans ambiguïté — remplace l'ancien exercice
+    // d'ordre chronologique, jugé trop subjectif).
+    challenges.push(genMatching(pool));
     return challenges;
   }
 
@@ -447,7 +587,7 @@ const Game = (function () {
       const t = types[i % types.length];
       if (t === "image-word") challenges.push(genImageWord(w));
       else if (t === "listen-image") challenges.push(genListenImage(w, pool));
-      else if (t === "situation-choice") challenges.push(genSituationChoice(w));
+      else if (t === "situation-choice") challenges.push(genSituationChoice(pool));
       else challenges.push(genFillBlank(w));
     }
     const timelineIds = [
@@ -461,13 +601,19 @@ const Game = (function () {
       "faire_ses_devoirs",
       "diner"
     ];
+    // Se aceptan dos órdenes válidas: lavarse y desayunar pueden
+    // intercambiarse (ambos ocurren "por la mañana, antes de la escuela")
+    // sin que eso sea un error real, para evitar exigir una precisión
+    // arbitraria que el propio horario no impone.
+    const timelineAlt = timelineIds.slice();
+    [timelineAlt[1], timelineAlt[2]] = [timelineAlt[2], timelineAlt[1]];
     challenges.push({
       type: "final-timeline",
       wordIds: timelineIds,
       instruction: INSTRUCTIONS["final-timeline"],
       data: {
         items: shuffle(timelineIds.map((id) => ({ id, label: byId(id).infinitive, icon: byId(id).icon }))),
-        correctOrders: [timelineIds]
+        correctOrders: [timelineIds, timelineAlt]
       }
     });
     return challenges;
@@ -577,8 +723,8 @@ const Game = (function () {
       const t = types[i % types.length];
       if (t === "listen-image") challenges.push(genListenImage(w, pool));
       else if (t === "write-verb") challenges.push(genWriteVerb(w));
-      else if (t === "situation-choice") challenges.push(genSituationChoice(w));
-      else if (t === "find-error") challenges.push(genFindError());
+      else if (t === "situation-choice") challenges.push(genSituationChoice(pool));
+      else if (t === "find-error") challenges.push(genFindError(pool));
       else challenges.push(genImageWord(w));
     }
     challenges.push(...genQuickMission(pool, 3));
@@ -634,7 +780,7 @@ const Game = (function () {
       const t = types[i % types.length];
       if (t === "listen-image") challenges.push(genListenImage(w, pool));
       else if (t === "fill-blank") challenges.push(genFillBlank(w));
-      else if (t === "situation-choice") challenges.push(genSituationChoice(w));
+      else if (t === "situation-choice") challenges.push(genSituationChoice(pool));
       else if (t === "find-error") challenges.push(genFindError(pool));
       else challenges.push(genImageWord(w));
     }
@@ -729,6 +875,40 @@ const Game = (function () {
     session.queue.splice(pos, 0, clone);
   }
 
+  function maskPhrase(phrase) {
+    return phrase
+      .split(" ")
+      .map((tok) => {
+        if (tok.length <= 1) return tok;
+        const first = tok.charAt(0);
+        const rest = tok
+          .slice(1)
+          .split("")
+          .map((ch) => (/[a-zàâäéèêëîïôöùûüç]/i.test(ch) ? "_" : ch))
+          .join("");
+        return first + rest;
+      })
+      .join(" ");
+  }
+
+  function blankedExample(word) {
+    const fp = word.firstPerson;
+    const idx = word.example.toLowerCase().indexOf(fp.toLowerCase());
+    if (idx !== -1) {
+      return word.example.slice(0, idx) + "___" + word.example.slice(idx + fp.length);
+    }
+    return word.example.replace(word.infinitive, "___");
+  }
+
+  const CATEGORY_LABELS_ES = {
+    matin: "rutina de la mañana",
+    journee: "actividades del día",
+    maison: "habitación o cocina",
+    menage: "tarea doméstica / limpieza",
+    objet: "objeto para limpiar",
+    idiomatique: "expresión coloquial"
+  };
+
   function useHint(challenge) {
     if (session.currentHintStage >= 4) return { stage: session.currentHintStage, done: true };
     session.currentHintStage += 1;
@@ -738,13 +918,16 @@ const Game = (function () {
     const result = { stage: session.currentHintStage };
     if (session.currentHintStage === 1) {
       result.type = "letter";
-      result.content = challenge.data.hintLetter || (word ? word.infinitive.charAt(0) : "?");
+      const target = challenge.data.displayAnswer || (word ? word.infinitive : "?");
+      result.content = maskPhrase(target);
     } else if (session.currentHintStage === 2) {
       result.type = "audio";
       result.content = word ? word.infinitive : "";
+      result.sentence = word ? blankedExample(word) : "";
     } else if (session.currentHintStage === 3) {
       result.type = "translation";
       result.content = word ? word.translation : "";
+      result.category = word ? CATEGORY_LABELS_ES[word.category] || "" : "";
     } else if (session.currentHintStage === 4) {
       result.type = "reduce";
       if (challenge.data.options && challenge.data.options.length > 2) {

@@ -12,14 +12,13 @@ const Storage = (function () {
   function defaultState() {
     return {
       settings: {
-        musicOn: true,
         sfxOn: true,
         voiceOn: true,
         instructionLang: "fr" // "fr" | "es"
       },
       teacherSettings: {
         levelsEnabled: [1, 2, 3, 4, 5],
-        categories: ["matin", "journee", "maison", "menage", "objet"],
+        categories: ["matin", "journee", "maison", "menage", "objet", "idiomatique"],
         timerEnabled: true,
         questionCount: 10,
         onlyMenage: false,
