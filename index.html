@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Routine Rush : Ma journée en français</title>
+<meta name="description" content="Jeu éducatif pour apprendre le vocabulaire de la routine quotidienne en français (niveau A1)." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧹</text></svg>" />
+<link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+<a class="skip-link" href="#main-content">Aller au contenu principal</a>
+
+<div id="audio-warning" class="audio-warning" hidden role="status">
+  <span></span>
+  <button type="button" class="btn btn--tiny" id="btn-close-audio-warning" aria-label="Fermer l'avertissement">✕</button>
+</div>
+
+<main id="main-content">
+
+  <!-- ================= PANTALLA INICIO ================= -->
+  <section id="screen-start" class="screen screen--active" aria-labelledby="start-title">
+    <div class="start-card">
+      <div class="start-emoji" aria-hidden="true">🧹🏠🌅</div>
+      <h1 id="start-title">Routine Rush</h1>
+      <p class="subtitle">Ma journée en français</p>
+      <p class="lede" data-i18n-key="start-lede">Aide ton personnage à réussir sa journée : le matin, l'école, et le grand ménage de la maison !</p>
+
+      <div class="start-actions">
+        <button type="button" id="btn-play" class="btn btn--primary btn--large">▶️ Jouer</button>
+        <button type="button" id="btn-continue" class="btn btn--secondary btn--large">⏩ Continuer</button>
+      </div>
+
+      <div class="start-secondary-actions">
+        <button type="button" id="btn-settings" class="btn btn--outline" aria-haspopup="dialog">⚙️ Réglages</button>
+        <button type="button" id="btn-teacher-mode" class="btn btn--outline" aria-haspopup="dialog">🎓 Mode professeur</button>
+      </div>
+
+      <div class="start-footer">
+        <div class="lang-selector">
+          <label for="select-instruction-lang">Langue des instructions / Idioma de las instrucciones</label>
+          <select id="select-instruction-lang">
+            <option value="fr">Français</option>
+            <option value="es">Español (ayuda)</option>
+          </select>
+        </div>
+        <button type="button" id="btn-erase-progress" class="btn btn--danger-outline">🗑️ Effacer la progression</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MAPA DE NIVELES ================= -->
+  <section id="screen-map" class="screen" aria-labelledby="map-title">
+    <header class="topbar">
+      <button type="button" class="btn btn--icon" id="btn-map-back" aria-label="Retour à l'accueil">⬅️</button>
+      <h2 id="map-title">Carte des niveaux</h2>
+      <div class="topbar-stats">
+        <span id="map-xp-rank" class="rank-badge">Débutant du quotidien</span>
+        <button type="button" class="btn btn--icon" id="btn-map-settings" aria-label="Réglages">⚙️</button>
+      </div>
+    </header>
+
+    <div class="house-scene" id="house-scene" aria-hidden="true"></div>
+
+    <div class="level-grid" id="level-grid" role="list"></div>
+  </section>
+
+  <!-- ================= PANTALLA DE JUEGO ================= -->
+  <section id="screen-game" class="screen" aria-labelledby="game-level-title">
+    <header class="game-hud">
+      <button type="button" class="btn btn--icon" id="btn-pause" aria-label="Pause">⏸️</button>
+      <div class="hud-center">
+        <h2 id="game-level-title" class="hud-level-title"></h2>
+        <div class="progress-bar" role="progressbar" aria-label="Progression du niveau" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-bar">
+          <div class="progress-bar-fill" id="progress-bar-fill"></div>
+        </div>
+      </div>
+      <div class="hud-right">
+        <span class="hud-score" id="hud-score" aria-live="polite">0 pts</span>
+        <span class="hud-combo" id="hud-combo" aria-live="polite"></span>
+      </div>
+    </header>
+
+    <div class="challenge-area" id="challenge-area">
+      <div class="challenge-instruction-row">
+        <p class="challenge-instruction" id="challenge-instruction"></p>
+        <div class="instruction-controls">
+          <button type="button" class="btn btn--tiny" id="btn-translate" aria-pressed="false">🌐 ES</button>
+          <button type="button" class="btn btn--tiny" id="btn-play-audio" aria-label="Écouter la prononciation">🔊</button>
+        </div>
+      </div>
+      <p class="instruction-translation" id="instruction-translation" hidden></p>
+
+      <div class="challenge-body" id="challenge-body"></div>
+
+      <div class="feedback-panel" id="feedback-panel" aria-live="assertive" hidden></div>
+
+      <div class="challenge-actions">
+        <button type="button" class="btn btn--outline" id="btn-hint">💡 Indice</button>
+        <button type="button" class="btn btn--primary" id="btn-submit">✅ Valider</button>
+        <button type="button" class="btn btn--secondary" id="btn-next" hidden>➡️ Continuer</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PANTALLA DE RESULTADOS ================= -->
+  <section id="screen-results" class="screen" aria-labelledby="results-title">
+    <div class="results-card">
+      <h2 id="results-title">Résultats</h2>
+      <div class="results-stars" id="results-stars" aria-hidden="true"></div>
+      <p class="results-stars-text" id="results-stars-text"></p>
+
+      <dl class="results-stats">
+        <div><dt>Score</dt><dd id="results-score">0</dd></div>
+        <div><dt>Précision</dt><dd id="results-accuracy">0 %</dd></div>
+        <div><dt>Meilleur combo</dt><dd id="results-combo">x1</dd></div>
+        <div><dt>Mots maîtrisés</dt><dd id="results-mastered">0</dd></div>
+      </dl>
+
+      <div class="results-practice" id="results-practice"></div>
+
+      <div class="results-actions">
+        <button type="button" class="btn btn--outline" id="btn-replay">🔁 Rejouer</button>
+        <button type="button" class="btn btn--primary" id="btn-next-level">➡️ Niveau suivant</button>
+        <button type="button" class="btn btn--secondary" id="btn-back-to-map">🗺️ Carte</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ================= MODAL: RÉGLAGES ================= -->
+<div class="modal-overlay" id="modal-settings" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <h2 id="settings-title">⚙️ Réglages</h2>
+    <div class="settings-row">
+      <label for="toggle-music">🎵 Musique</label>
+      <input type="checkbox" id="toggle-music" />
+    </div>
+    <div class="settings-row">
+      <label for="toggle-sfx">🔔 Effets sonores</label>
+      <input type="checkbox" id="toggle-sfx" />
+    </div>
+    <div class="settings-row">
+      <label for="toggle-voice">🗣️ Prononciation</label>
+      <input type="checkbox" id="toggle-voice" />
+    </div>
+    <div class="settings-row">
+      <label for="toggle-textsize">🔠 Grand texte</label>
+      <input type="checkbox" id="toggle-textsize" />
+    </div>
+    <button type="button" class="btn btn--primary" id="btn-close-settings">Fermer</button>
+  </div>
+</div>
+
+<!-- ================= MODAL: PAUSE ================= -->
+<div class="modal-overlay" id="modal-pause" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+    <h2 id="pause-title">⏸️ Pause</h2>
+    <div class="modal-actions modal-actions--column">
+      <button type="button" class="btn btn--primary" id="btn-resume">▶️ Reprendre</button>
+      <button type="button" class="btn btn--outline" id="btn-pause-settings">⚙️ Réglages</button>
+      <button type="button" class="btn btn--secondary" id="btn-pause-quit">🗺️ Quitter vers la carte</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: CONFIRMAR BORRADO ================= -->
+<div class="modal-overlay" id="modal-confirm-reset" hidden>
+  <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-reset-title">
+    <h2 id="confirm-reset-title">⚠️ Effacer la progression ?</h2>
+    <p>Toutes tes étoiles, tes points et tes niveaux débloqués seront supprimés définitivement de cet appareil. Cette action est irréversible.</p>
+    <p class="es-note">Se borrarán todas tus estrellas, puntos y niveles desbloqueados de este dispositivo. Esta acción no se puede deshacer.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn--secondary" id="btn-cancel-reset">Annuler</button>
+      <button type="button" class="btn btn--danger" id="btn-confirm-reset">Effacer définitivement</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: MODE PROFESSEUR ================= -->
+<div class="modal-overlay" id="modal-teacher" hidden>
+  <div class="modal modal--large" role="dialog" aria-modal="true" aria-labelledby="teacher-title">
+    <h2 id="teacher-title">🎓 Mode professeur</h2>
+    <p class="modal-lede">Configure une session de pratique personnalisée. Aucune donnée n'est envoyée sur internet.</p>
+
+    <div class="teacher-section">
+      <h3>Niveaux</h3>
+      <div class="chip-group" id="teacher-levels"></div>
+    </div>
+
+    <div class="teacher-section">
+      <h3>Catégories de vocabulaire</h3>
+      <div class="chip-group" id="teacher-categories"></div>
+    </div>
+
+    <div class="teacher-section teacher-row">
+      <label for="teacher-timer">⏱️ Activer le chronomètre</label>
+      <input type="checkbox" id="teacher-timer" />
+    </div>
+
+    <div class="teacher-section teacher-row">
+      <label for="teacher-question-count">Nombre de questions</label>
+      <input type="number" id="teacher-question-count" min="8" max="12" value="9" />
+    </div>
+
+    <div class="teacher-section teacher-row">
+      <label for="teacher-only-menage">🧹 Pratiquer uniquement les tâches ménagères</label>
+      <input type="checkbox" id="teacher-only-menage" />
+    </div>
+
+    <div class="teacher-section teacher-row">
+      <label for="teacher-only-pronominaux">🔁 Pratiquer uniquement les verbes pronominaux</label>
+      <input type="checkbox" id="teacher-only-pronominaux" />
+    </div>
+
+    <div class="teacher-section">
+      <h3>Suivi</h3>
+      <p id="teacher-mastered-summary">Mots maîtrisés : 0</p>
+      <p id="teacher-practice-summary">Mots à pratiquer : 0</p>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn--danger-outline" id="btn-teacher-reset">Réinitialiser la progression</button>
+      <button type="button" class="btn btn--primary" id="btn-teacher-start">▶️ Démarrer la pratique</button>
+      <button type="button" class="btn btn--secondary" id="btn-teacher-close">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div id="sr-announcer" class="sr-only" aria-live="polite"></div>
+
+<script src="./data/vocabulary.js"></script>
+<script src="./js/storage.js"></script>
+<script src="./js/audio.js"></script>
+<script src="./js/game.js"></script>
+<script src="./js/ui.js"></script>
+<script src="./js/app.js"></script>
+</body>
+</html>
